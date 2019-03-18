@@ -14,10 +14,10 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 0
-  m_FogColor: {r: 0.6, g: 0.7294118, b: 0.8745099, a: 1}
+  m_Fog: 1
+  m_FogColor: {r: 0.6, g: 0.7294118, b: 0.8745099, a: 0.50980395}
   m_FogMode: 3
-  m_FogDensity: 0.1
+  m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
@@ -270,7 +270,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: -1
+  m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3
@@ -333,9 +333,9 @@ MonoBehaviour:
   antialiasingMode: 3
   temporalAntialiasing:
     jitterSpread: 0.1
-    sharpness: 0.1
-    stationaryBlending: 0.25
-    motionBlending: 0.125
+    sharpness: 0
+    stationaryBlending: 0.5
+    motionBlending: 0.25
   subpixelMorphologicalAntialiasing:
     quality: 2
   fastApproximateAntialiasing:
@@ -343,7 +343,7 @@ MonoBehaviour:
     keepAlpha: 0
   fog:
     enabled: 1
-    excludeSkybox: 1
+    excludeSkybox: 0
   debugLayer:
     lightMeter:
       width: 512
@@ -372,6 +372,73 @@ MonoBehaviour:
   m_BeforeTransparentBundles: []
   m_BeforeStackBundles: []
   m_AfterStackBundles: []
+--- !u!4 &944087795 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6,
+    type: 3}
+  m_PrefabInstance: {fileID: 993780098}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &993780098
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 100000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_Name
+      value: Selection Block
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_RootOrder
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 7ae727feef7cbf743b4b8ec823a99fff, type: 2}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5819fe6015bedf14aae1ce5a58f3d7c6, type: 3}
 --- !u!1 &1569413931
 GameObject:
   m_ObjectHideFlags: 0
@@ -401,6 +468,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6af2039f606a76b4ea72ef7c34da784f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  particleManager: {fileID: 1792218546}
   chunkContainer: {fileID: 396524273}
   player: {fileID: 1878798738}
   blockInfos:
@@ -420,13 +488,124 @@ MonoBehaviour:
     uvPosTop: {x: 0, y: 1}
     uvPosBottom: {x: 2, y: 0}
     uvPosSide: {x: 3, y: 0}
-  seed: 2
-  offset: {x: 0, y: 0, z: 0}
-  octaves: 4
-  scale: 100.1
-  persistance: 0.5
-  lacunarity: 2
-  playerCoordinates: {x: 0, y: 0, z: 0}
+  - name: Gravel
+    uvPosTop: {x: 1, y: 1}
+    uvPosBottom: {x: 1, y: 1}
+    uvPosSide: {x: 1, y: 1}
+  - name: Coal
+    uvPosTop: {x: 2, y: 1}
+    uvPosBottom: {x: 2, y: 1}
+    uvPosSide: {x: 2, y: 1}
+  - name: Iron
+    uvPosTop: {x: 3, y: 1}
+    uvPosBottom: {x: 3, y: 1}
+    uvPosSide: {x: 3, y: 1}
+  seed: 8
+  curve_Elevation:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: -0.101043805
+      value: 0.22973818
+      inSlope: -0.005259022
+      outSlope: -0.005259022
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 1
+    - serializedVersion: 3
+      time: 0.1420156
+      value: 0.2672106
+      inSlope: 0.0130761145
+      outSlope: 0.0130761145
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.17356713
+    - serializedVersion: 3
+      time: 0.33831668
+      value: 0.39996704
+      inSlope: 0.628878
+      outSlope: 0.628878
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.21755195
+    - serializedVersion: 3
+      time: 0.640221
+      value: 0.49897113
+      inSlope: 0.91051203
+      outSlope: 0.91051203
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.79836875
+      value: 0.8103063
+      inSlope: 0.0019902282
+      outSlope: 0.0019902282
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 1
+    - serializedVersion: 3
+      time: 0.92146146
+      value: 0.8412325
+      inSlope: 1.1106488
+      outSlope: 1.1106488
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1.355693
+      outSlope: 1.355693
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.54892075
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  elevationBottom: -64
+  elevationHeight: 192
+  noiseSettings_Mountains:
+    scale: 125
+    octaves: 4
+    persistance: 0.5
+    lacunarity: 2
+  noiseSettings_Elevation:
+    scale: 175
+    octaves: 5
+    persistance: 0.5
+    lacunarity: 2
+  noiseSettings_Gravel:
+    scale: 12.5
+    octaves: 2
+    persistance: 0.5
+    lacunarity: 2.5
+  noiseSettings_Caves:
+    scale: 0
+    octaves: 0
+    persistance: 0
+    lacunarity: 0
+  noiseSettings_Coal:
+    scale: 15
+    octaves: 2
+    persistance: 0.5
+    lacunarity: 2
+  noiseSettings_Iron:
+    scale: 10
+    octaves: 2
+    persistance: 0.5
+    lacunarity: 3
+  playerCoordinates:
+    x: 0
+    y: 0
+    z: 0
   prefab_Chunk: {fileID: 6354792037665389062, guid: f61c82358e89132469e77be67d3e6436,
     type: 3}
 --- !u!4 &1569413933
@@ -473,6 +652,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 977294b7c0e43ab4b9952e07418c2b4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  blockDebris: []
+  prefab_BlockDebris: {fileID: 6766789237682766438, guid: 2649f0affa8a144489ee5c5ee0c2ccb1,
+    type: 3}
+  maxDebris: 512
 --- !u!4 &1792218547
 Transform:
   m_ObjectHideFlags: 0
@@ -534,3 +717,4 @@ MonoBehaviour:
   blockMask:
     serializedVersion: 2
     m_Bits: 1024
+  selectionBlock: {fileID: 944087795}

@@ -10,6 +10,8 @@ public class Player : MonoBehaviour {
 	Vector2 rotation;
 	Vector3 velocity;
 
+	public Transform selectionBlock;
+
 	float attackRange = 5f;
 
 	private void Update () {
@@ -37,19 +39,41 @@ public class Player : MonoBehaviour {
 		transform.position += velocity * Time.deltaTime;
 	}
 
-	private void UpdateBuilding () {
+	private void UpdateBuilding() {
+
+		RaycastHit mouseHit;
+		if (Physics.Raycast(transform.position, transform.forward, out mouseHit, attackRange, blockMask)) {
+			Vector3 blockPos = mouseHit.point + (mouseHit.normal * -0.9f);
+			blockPos = new Vector3(Mathf.Round(blockPos.x), Mathf.Round(blockPos.y), Mathf.Round(blockPos.z));
+
+			selectionBlock.position = blockPos;
+			if (selectionBlock.gameObject.activeSelf == false) { selectionBlock.gameObject.SetActive(true); }
+		} else {
+			if (selectionBlock.gameObject.activeSelf == true) { selectionBlock.gameObject.SetActive(false); }
+		}
+
 		if (Input.GetMouseButtonDown(0)) {
 			RaycastHit hit;
 			if (Physics.Raycast(transform.position, transform.forward, out hit, attackRange, blockMask)) {
-				hit.transform.gameObject.GetComponent<Chunk>().BreakBlock(hit.point, hit.normal);
+				hit.transform.gameObject.GetComponent<Chunk>().BreakBlock(hit.point, hit.normal, transform.forward);
 			}
 		}
 
 		if (Input.GetMouseButtonDown(1)) {
 			RaycastHit hit;
 			if (Physics.Raycast(transform.position, transform.forward, out hit, attackRange, blockMask)) {
-				hit.transform.gameObject.GetComponent<Chunk>().PlaceBlock(hit.point, hit.normal);
+				hit.transform.gameObject.GetComponent<Chunk>().AttemptPlaceBlock(hit.point, hit.normal);
 			}
+		}
+
+		if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) {
+			Cursor.lockState = CursorLockMode.Locked;
+			Cursor.visible = false;
+		}
+
+		if (Input.GetKeyDown(KeyCode.Escape)) {
+			Cursor.lockState = CursorLockMode.None;
+			Cursor.visible = true;
 		}
 	}
 

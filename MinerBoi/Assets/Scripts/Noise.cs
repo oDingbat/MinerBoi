@@ -4,101 +4,98 @@ using UnityEngine;
 
 public static class Noise {
  
-	public static float[,] GenerateNoiseMap (int mapSize, float mapScale, int seed, int octaves, float persistance, float lacunarity) {
-		float[,] noiseMap = new float[mapSize, mapSize];
-
-		if (mapScale <= 0) {
-			mapScale = 0.001f;
-		}
-
-		float maxNoiseHeight = float.MinValue;
-		float minNoiseHeight = float.MaxValue;
-
-		for (int x = 0; x < mapSize; x++) {
-			for (int y = 0; y < mapSize; y++) {
-
-				float amplitude = 1;
-				float frequency = 1;
-				float noiseHeight = 0;
-
-				for (int i = 0; i < octaves; i++) {
-					float sampleX = x / mapScale * frequency;
-					float sampleY = y / mapScale * frequency;
-
-					float perlinValue = (Mathf.PerlinNoise(sampleX, sampleY) * 2) - 1;
-
-					noiseHeight += perlinValue * amplitude;
-					
-					// Increase amplitude and frequency
-					amplitude *= persistance;
-					frequency *= lacunarity;
-				}
-
-				if (noiseHeight > maxNoiseHeight) {
-					maxNoiseHeight = noiseHeight;
-				} else if (noiseHeight < minNoiseHeight) {
-					minNoiseHeight = noiseHeight;
-				}
-
-				noiseMap[x, y] = noiseHeight;
-			}
-		}
-
-		for (int x = 0; x < mapSize; x++) {
-			for (int y = 0; y < mapSize; y++) {
-				noiseMap[x, y] = Mathf.InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[x, y]);
-			}
-		}
-
-		return noiseMap;
-	}
-
-	public static float[,,] GenerateNoiseMap3D (int chunkSize, float chunkScale, int seed, int octaves, float persistance, float lacunarity, Vector3 offset) {
-		float[,,] noiseMap3D = new float[chunkSize, chunkSize, chunkSize];
-
-		Vector3 midpointOffset = -new Vector3(chunkSize / 2, chunkSize / 2, chunkSize / 2);
+	public static float[,] GenerateNoiseMap2D (int width, int height, int seed, NoiseSettings noiseSettings, Vector3 offset) {
+		float[,] noiseMap2D = new float[width, height];
 
 		System.Random prng = new System.Random(seed);
-		Vector3[] octaveOffsets = new Vector3[octaves];
+		Vector2[] octaveOffsets = new Vector2[noiseSettings.octaves];
 
 		float amplitude = 1;
 		float frequency = 1;
 		float maxNoiseHeight = 0;
 
-		for (int i = 0; i < octaves; i++) {
+		for (int i = 0; i < noiseSettings.octaves; i++) {
+			float offsetX = prng.Next(-100000, 100000) + offset.x;
+			float offsetY = prng.Next(-100000, 100000) + offset.y;
+			octaveOffsets[i] = new Vector2(offsetX, offsetY);
+
+			maxNoiseHeight += amplitude;
+			amplitude *= noiseSettings.persistance;
+		}
+
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+
+				amplitude = 1;
+				frequency = 1;
+				float noiseHeight = 0;
+
+				for (int i = 0; i < noiseSettings.octaves; i++) {
+					float sampleX = ((x + octaveOffsets[i].x) / noiseSettings.scale) * frequency;
+					float sampleY = ((y + octaveOffsets[i].y) / noiseSettings.scale) * frequency;
+
+					float perlinValue = Mathf.PerlinNoise(sampleX, sampleY);
+
+					noiseHeight += perlinValue * amplitude;
+					
+					// Increase amplitude and frequency
+					amplitude *= noiseSettings.persistance;
+					frequency *= noiseSettings.lacunarity;
+				}
+
+				noiseMap2D[x, y] = noiseHeight;
+			}
+		}
+
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				noiseMap2D[x, y] = (noiseMap2D[x, y] / maxNoiseHeight);
+			}
+		}
+
+		return noiseMap2D;
+	}
+
+	public static float[,,] GenerateNoiseMap3D (int width, int height, int depth, int seed, NoiseSettings noiseSettings, Vector3 offset) {
+		float[,,] noiseMap3D = new float[width, height, depth];
+
+		System.Random prng = new System.Random(seed);
+		Vector3[] octaveOffsets = new Vector3[noiseSettings.octaves];
+
+		float amplitude = 1;
+		float frequency = 1;
+		float maxNoiseHeight = 0;
+
+		for (int i = 0; i < noiseSettings.octaves; i++) {
 			float offsetX = prng.Next(-100000, 100000) + offset.x;
 			float offsetY = prng.Next(-100000, 100000) + offset.y;
 			float offsetZ = prng.Next(-100000, 100000) + offset.z;
 			octaveOffsets[i] = new Vector3(offsetX, offsetY, offsetZ);
 
 			maxNoiseHeight += amplitude;
-			amplitude *= persistance;
+			amplitude *= noiseSettings.persistance;
 		}
 
-		if (chunkScale <= 0) {
-			chunkScale = 0.001f;
-		}
-
-		for (int x = 0; x < chunkSize; x++) {
-			for (int y = 0; y < chunkSize; y++) {
-				for (int z = 0; z < chunkSize; z++) {
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				for (int z = 0; z < depth; z++) {
 
 					amplitude = 1;
 					frequency = 1;
 					float noiseHeight = 0;
 
-					for (int i = 0; i < octaves; i++) {
-						float sampleX = ((x + octaveOffsets[i].x + midpointOffset.x) / chunkScale) * frequency;
-						float sampleY = ((y + octaveOffsets[i].y + midpointOffset.y) / chunkScale) * frequency;
-						float sampleZ = ((z + octaveOffsets[i].z + midpointOffset.z) / chunkScale) * frequency;
+					for (int i = 0; i < noiseSettings.octaves; i++) {
+						float sampleX = ((x + octaveOffsets[i].x) / noiseSettings.scale) * frequency;
+						float sampleY = ((y + octaveOffsets[i].y) / noiseSettings.scale) * frequency;
+						float sampleZ = ((z + octaveOffsets[i].z) / noiseSettings.scale) * frequency;
 
 						float perlinValue = Perlin3D(sampleX, sampleY, sampleZ);
 
 						noiseHeight += perlinValue * amplitude;
 
 						// Increase amplitude and frequency
-						amplitude *= persistance;
-						frequency *= lacunarity;
+						amplitude *= noiseSettings.persistance;
+						frequency *= noiseSettings.lacunarity;
 					}
 
 					noiseMap3D[x, y, z] = noiseHeight;
@@ -106,10 +103,34 @@ public static class Noise {
 			}
 		}
 
-		for (int x = 0; x < chunkSize; x++) {
-			for (int y = 0; y < chunkSize; y++) {
-				for (int z = 0; z < chunkSize; z++) {
-					noiseMap3D[x, y, z] = (noiseMap3D[x, y, z] / maxNoiseHeight) - 0.5f;
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				for (int z = 0; z < depth; z++) {
+					noiseMap3D[x, y, z] = ((noiseMap3D[x, y, z] / maxNoiseHeight) - 0.5f) * 12.5f;
+				}
+			}
+		}
+
+		return noiseMap3D;
+	}
+
+	public static float[,,] Convert2DTo3D (float[,] noiseMap2D, int height, AnimationCurve curve) {
+		int width = noiseMap2D.GetLength(0);
+		int depth = noiseMap2D.GetLength(1);
+		
+		float[,,] noiseMap3D = new float[width, height, depth];
+
+		for (int x = 0; x < width; x++) {
+			for (int z = 0; z < depth; z++) {
+				float elevationBlend = 1f;
+				for (int y = 0; y < height; y++) {
+					if (y > ((float)height * curve.Evaluate(noiseMap2D[x, z]))) {
+						elevationBlend = Mathf.Clamp(elevationBlend - 0.025f, -0.5f, 1f);
+						noiseMap3D[x, y, z] = elevationBlend;
+					} else {
+						noiseMap3D[x, y, z] = 1.25f;
+					}
+
 				}
 			}
 		}
@@ -146,6 +167,20 @@ public static class Noise {
 
 		float abc = ab + bc + ac + ba + cb + ca;
 		return abc / 6f;
+	}
+
+}
+
+[System.Serializable]
+public class NoiseSettings {
+	
+	public float scale;
+	public int octaves;
+	public float persistance;
+	public float lacunarity;
+
+	public NoiseSettings (float scale, int octaves, float persistance, float lacunarity) {
+
 	}
 
 }

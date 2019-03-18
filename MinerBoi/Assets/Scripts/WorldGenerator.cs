@@ -7,6 +7,7 @@ using System.Linq;
 public class WorldGenerator : MonoBehaviour {
 
 	[Header("References")] [Space(10)]
+	public ParticleManager particleManager;
 	public Transform chunkContainer;
 	public Player player;
 
@@ -15,11 +16,17 @@ public class WorldGenerator : MonoBehaviour {
 
 	[Header("Generation Settings")] [Space(10)]
 	public int seed;
-	public Vector3 offset;
-	public int octaves = 4;
-	public float scale = 50.1f;
-	public float persistance = 0.5f;        // Controls decrease in amplitude between octaves
-	public float lacunarity = 2f;           // The increase in frequency between octaves
+	public AnimationCurve curve_Elevation;
+	public int elevationBottom = -96;
+	public int elevationHeight = 256;
+	public NoiseSettings noiseSettings_Mountains;
+	public NoiseSettings noiseSettings_Elevation;
+	public NoiseSettings noiseSettings_Gravel;
+	public NoiseSettings noiseSettings_Caves;
+
+	[Header("Ores")] [Space(10)]
+	public NoiseSettings noiseSettings_Coal;
+	public NoiseSettings noiseSettings_Iron;
 
 	[Header("Chunk Settings")] [Space(10)]
 	int chunkCount = 10000;
@@ -27,10 +34,10 @@ public class WorldGenerator : MonoBehaviour {
 	// Constants
 	int chunkSize = 16;
 	List<Chunk> chunksUnloaded = new List<Chunk>();
-	Dictionary<Vector3, Chunk> chunksLoaded = new Dictionary<Vector3, Chunk>();
-	List<Chunk> chunksLoadPending = new List<Chunk>();
+	List<Coordinates> chunkCoordsQueued = new List<Coordinates>();
+	public Dictionary<Coordinates, Chunk> chunksLoaded = new Dictionary<Coordinates, Chunk>();
 
-	public Vector3 playerCoordinates;
+	public Coordinates playerCoordinates;
 
 	public GameObject prefab_Chunk;
 
@@ -44,20 +51,43 @@ public class WorldGenerator : MonoBehaviour {
 
 	IEnumerator ChunkLoadCoroutine () {
 		while (true) {
-			if (chunksLoadPending.Count > 0) {
-				chunksLoadPending[0].LoadChunk(chunkSize, scale, seed, octaves, persistance, lacunarity, offset);
+			if (chunkCoordsQueued.Count > 0) {
+				Chunk chunkCurrent = chunksUnloaded[0];
+				chunkCurrent.coordinates = chunkCoordsQueued[0];
 
-				chunksLoaded.Add(chunksLoadPending[0].coordinates, chunksLoadPending[0]);
+				// Chunks new neighbors (if they exist)
+				Chunk chunkTop = chunksLoaded.ContainsKey(chunkCurrent.coordinates + new Coordinates(0, 1, 0)) ? chunksLoaded[chunkCurrent.coordinates + new Coordinates(0, 1, 0)] : null;
+				Chunk chunkBottom = chunksLoaded.ContainsKey(chunkCurrent.coordinates + new Coordinates(0, -1, 0)) ? chunksLoaded[chunkCurrent.coordinates + new Coordinates(0, -1, 0)] : null;
+				Chunk chunkLeft = chunksLoaded.ContainsKey(chunkCurrent.coordinates + new Coordinates(-1, 0, 0)) ? chunksLoaded[chunkCurrent.coordinates + new Coordinates(-1, 0, 0)] : null;
+				Chunk chunkRight = chunksLoaded.ContainsKey(chunkCurrent.coordinates + new Coordinates(1, 0, 0)) ? chunksLoaded[chunkCurrent.coordinates + new Coordinates(1, 0, 0)] : null;
+				Chunk chunkFront = chunksLoaded.ContainsKey(chunkCurrent.coordinates + new Coordinates(0, 0, 1)) ? chunksLoaded[chunkCurrent.coordinates + new Coordinates(0, 0, 1)] : null;
+				Chunk chunkBack = chunksLoaded.ContainsKey(chunkCurrent.coordinates + new Coordinates(0, 0, -1)) ? chunksLoaded[chunkCurrent.coordinates + new Coordinates(0, 0, -1)] : null;
 
-				chunksLoadPending.RemoveAt(0);
+				chunkCurrent.SetChunkNeighbors(chunkTop, chunkBottom, chunkLeft, chunkRight, chunkFront, chunkBack);
+				chunkCurrent.LoadChunk(chunkSize, seed);
+
+				// Set Neighboring chunks new neighbor chunkCurrent
+				if (chunkTop) {		chunkTop.chunkBottom = chunkCurrent; chunkTop.GenerateMesh(); }
+				if (chunkBottom) {	chunkBottom.chunkTop = chunkCurrent; chunkBottom.GenerateMesh(); }
+				if (chunkLeft) {	chunkLeft.chunkRight = chunkCurrent; chunkLeft.GenerateMesh(); }
+				if (chunkRight) {	chunkRight.chunkLeft = chunkCurrent; chunkRight.GenerateMesh(); }
+				if (chunkFront) {	chunkFront.chunkBack = chunkCurrent; chunkFront.GenerateMesh(); }
+				if (chunkBack) {	chunkBack.chunkFront = chunkCurrent; chunkBack.GenerateMesh(); }
+
+				//UnityEngine.Debug.Log("(" + chunkCoordsQueued[0].x + ", " + chunkCoordsQueued[0].y + ", " + chunkCoordsQueued[0].z + ") - " + chunkCoordsQueued.Count + " - " + chunksLoaded.Count);
+
+				chunksLoaded.Add(chunkCoordsQueued[0], chunksUnloaded[0]);
+				chunksUnloaded.RemoveAt(0);
+				chunkCoordsQueued.RemoveAt(0);
 			}
 
-			yield return new WaitForSeconds(0.005f);
+			yield return new WaitForSeconds(0.00125f);
 		}
+		
 	}
 
 	private void Update () {
-		Vector3 newPlayerCoordinates = PositionToCoordinates(player.transform.position);
+		Coordinates newPlayerCoordinates = PositionToCoordinates(player.transform.position);
 
 		if (playerCoordinates != newPlayerCoordinates) {
 			LoadChunksNearCoordinates(newPlayerCoordinates);
@@ -66,6 +96,14 @@ public class WorldGenerator : MonoBehaviour {
 		playerCoordinates = newPlayerCoordinates;
 	}
 
+	private void LateUpdate () {
+		foreach (KeyValuePair<Coordinates, Chunk> chunkAndCoords in chunksLoaded) {
+			if (chunkAndCoords.Value.meshUpdatePending == true) {
+				chunkAndCoords.Value.GenerateMesh();
+			}
+		}
+	}
+	
 	private void InitializeChunks () {
 		// Creates all of the chunks that can be present at any given time; populates the chunks array
 
@@ -76,79 +114,71 @@ public class WorldGenerator : MonoBehaviour {
 		}
 	}
 
-	private void LoadChunksNearCoordinates (Vector3 coordinatesCenter) {
+	private void LoadChunksNearCoordinates (Coordinates coordinatesCenter) {
+		Stopwatch sw = new Stopwatch();
 
-		Vector3 coordCurrent = Vector3.zero;
+		sw.Start();
 
-		// Find coordinates of all nearby chunks we need loaded
-		List<Vector3> coordinatesNearby = new List<Vector3>();
-		for (int x = (int)coordinatesCenter.x - 6; x <= coordinatesCenter.x + 6; x++) {
-			for (int y = (int)coordinatesCenter.y - 6; y <= coordinatesCenter.y + 6; y++) {
-				for (int z = (int)coordinatesCenter.z - 6; z <= coordinatesCenter.z + 6; z++) {
-					coordCurrent = new Vector3(x, y, z);
-					coordinatesNearby.Add(coordCurrent);
+		Dictionary<Coordinates, Chunk> chunksLoadedKeeping = new Dictionary<Coordinates, Chunk>();
+
+		foreach (KeyValuePair<Coordinates, Chunk> chunkAndCoords in chunksLoaded) {
+			chunkAndCoords.Value.queuedForUnload = true;
+		}
+
+		// Clear queued chunk coords
+		chunkCoordsQueued.Clear();
+
+		int radius = 3;
+
+		Stopwatch swA = new Stopwatch();
+		swA.Start();
+
+		for (int x = -radius; x <= radius; x++) {
+			for (int y = -radius; y <= radius; y++) {
+				for (int z = -radius; z <= radius; z++) {
+					Coordinates chunkCoordinates = coordinatesCenter + new Coordinates(x, y, z);
+
+					Chunk chunkCurrent = null;
+
+					if (chunksLoaded.TryGetValue(chunkCoordinates, out chunkCurrent)) {
+						chunksLoadedKeeping.Add(chunkCoordinates, chunkCurrent);
+						chunkCurrent.queuedForUnload = false;
+					} else {
+						chunkCoordsQueued.Add(chunkCoordinates);
+					}
 				}
 			}
 		}
 
-		// Find Chunks To Unload
-		List<Vector3> chunkCoordsToUnload = new List<Vector3>();
-		foreach (KeyValuePair<Vector3, Chunk> chunkAndCoords in chunksLoaded) {
-			if (coordinatesNearby.Contains(chunkAndCoords.Key) == false) {
-				chunkCoordsToUnload.Add(chunkAndCoords.Key);
-			} else {
-				coordinatesNearby.Remove(chunkAndCoords.Key);       // Remove the key from nearbyCoordinates if this chunk is already loaded
-			}
-		}
-		foreach (Chunk chunkCurrent in chunksLoadPending) {
-			if (coordinatesNearby.Contains(chunkCurrent.coordinates) == false) {
-				chunkCoordsToUnload.Add(chunkCurrent.coordinates);
-			} else {
-				coordinatesNearby.Remove(chunkCurrent.coordinates);       // Remove the key from nearbyCoordinates if this chunk is already being loaded
+		swA.Stop();
+
+		// Unload Chunks outside of render distance
+		foreach (KeyValuePair<Coordinates, Chunk> chunkAndCoords in chunksLoaded) {
+			if (chunkAndCoords.Value.queuedForUnload == true) {
+				chunkAndCoords.Value.UnloadChunk();
+				chunksUnloaded.Add(chunkAndCoords.Value);
 			}
 		}
 
-		// Unload chunks out of range
-		foreach (Vector3 coords in chunkCoordsToUnload) {
-			if (chunksLoaded.ContainsKey(coords)) {
-				// Move chunk to chunks unloaded
-				chunksUnloaded.Add(chunksLoaded[coords]);
+		// Override chunksLoaded dictionary
+		chunksLoaded = chunksLoadedKeeping;
 
-				// Unload chunk and remove from chunksLoaded
-				chunksLoaded[coords].UnloadChunk();
-				chunksLoaded.Remove(coords);
-			} else if (chunksLoadPending.Exists(c => c.coordinates == coords)) {
-				Chunk chunkToUnload = chunksLoadPending.Single(c => c.coordinates == coords);
-				// Move chunk to chunks unloaded
-				chunksUnloaded.Add(chunkToUnload);
-
-				// Unload chunk and remove from chunksLoaded
-				chunkToUnload.UnloadChunk();
-				chunksLoadPending.Remove(chunkToUnload);
-			}
-		}
-
-		// Load Chunks
-		if (chunksUnloaded.Count > 0) {
-			foreach (Vector3 coordOfNewChunk in coordinatesNearby) {
-				// Add chunk into chunksLoaded Dictionary
-				chunksLoadPending.Add(chunksUnloaded[0]);
-				chunksUnloaded[0].SetChunkCoordinates(coordOfNewChunk);
-
-				// Remove chunk from chunksUnloaded
-				chunksUnloaded.RemoveAt(0);
-			}
-		}
+		sw.Stop();
+		//UnityEngine.Debug.Log("(Totol: " + sw.ElapsedMilliseconds + ") (A: " + swA.ElapsedMilliseconds + ")");
 	}
 
-	private Vector3 PositionToCoordinates (Vector3 position) {
+	private Coordinates PositionToCoordinates(Vector3 pos) {
+		return PositionToCoordinates(pos.x, pos.y, pos.z);
+	}
+
+	private Coordinates PositionToCoordinates (float x, float y, float z) {
 		int chunkSizeHalf = chunkSize / 2;
-		Vector3 coordinates = new Vector3(Mathf.Round((position.x - chunkSizeHalf) / chunkSize), Mathf.Round((position.y - chunkSizeHalf) / chunkSize), Mathf.Round((position.z - chunkSizeHalf) / chunkSize));
+		Coordinates coordinates = new Coordinates(Mathf.Round((x - chunkSizeHalf) / chunkSize), Mathf.Round((y - chunkSizeHalf) / chunkSize), Mathf.Round((z - chunkSizeHalf) / chunkSize));
 
 		return coordinates;
 	}	
 
-	public void UpdateChunk (Vector3 coordinates) {
+	public void UpdateChunk (Coordinates coordinates) {
 		if (chunksLoaded.ContainsKey(coordinates)) {
 			chunksLoaded[coordinates].UpdateChunk();
 		}
