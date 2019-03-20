@@ -18,6 +18,10 @@ public class Chunk : MonoBehaviour {
 
 	public enum ChunkDirection { Top, Bottom, Left, Right, Front, Back }
 
+	public int chunkSize;
+	public int chunkSizeP1;
+	public int chunkSizeM1;
+
 	public Chunk chunkTop;
 	public Chunk chunkBottom;
 	public Chunk chunkLeft;
@@ -42,7 +46,10 @@ public class Chunk : MonoBehaviour {
 		chunkBack = chunkBackNew;
 	}
 
-	public void LoadChunk (int chunkSize, int seed) {
+	public void LoadChunk (int seed) {
+
+		Stopwatch swTotal = new Stopwatch();
+		swTotal.Start();
 
 		transform.position = new Vector3(coordinates.x, coordinates.y, coordinates.z) * chunkSize;
 		Vector3 offset = new Vector3(coordinates.x, coordinates.y, coordinates.z) * chunkSize;
@@ -50,25 +57,47 @@ public class Chunk : MonoBehaviour {
 		blocks = new int[chunkSize, chunkSize, chunkSize];
 		blocksAbove = new int[chunkSize, chunkSize];
 
-		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * 16;
+		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * chunkSize;
 
-		float[,,] noiseMapMountains = Noise.GenerateNoiseMap3D(chunkSize, chunkSize + 1, chunkSize, seed, worldGenerator.noiseSettings_Mountains, offset);
+		Stopwatch swTerrainA = new Stopwatch();
+		swTerrainA.Start();
+
+		//float[,,] noiseMapMountains = Noise.GenerateNoiseMap3D(chunkSize, chunkSizeP1, chunkSize, seed, worldGenerator.noiseSettings_Mountains, offset);
+		float[,,] noiseMapMountains = Noise.GenerateNoiseMap3D(chunkSize, chunkSizeP1, chunkSize, worldGenerator.seed, worldGenerator.noiseSettings_Mountains, offset);
+
+		swTerrainA.Stop();
+
+		Stopwatch swTerrainB = new Stopwatch();
+		swTerrainB.Start();
+
 		float[,,] noiseMapElevation = Noise.Convert2DTo3D(Noise.GenerateNoiseMap2D(chunkSize, chunkSize, seed, worldGenerator.noiseSettings_Elevation, new Vector3(offset.x, offset.z)), Mathf.Clamp((worldGenerator.elevationHeight - worldGenerator.elevationBottom) + 1, 0, 2048), worldGenerator.curve_Elevation);
 
-		float[,,] noiseMapGravel = Noise.GenerateNoiseMap3D(chunkSize, chunkSize + 1, chunkSize, seed + 1, worldGenerator.noiseSettings_Gravel, offset);
-		float[,,] noiseMapCoal = Noise.GenerateNoiseMap3D(chunkSize, chunkSize + 1, chunkSize, seed + 2, worldGenerator.noiseSettings_Coal, offset);
-		float[,,] noiseMapIron = Noise.GenerateNoiseMap3D(chunkSize, chunkSize + 1, chunkSize, seed + 3, worldGenerator.noiseSettings_Iron, offset);
+		swTerrainB.Stop();
 
-		float[,,] noiseMapElevationSlice = new float[chunkSize, chunkSize + 1, chunkSize];
+		Stopwatch swOres = new Stopwatch();
+		swOres.Start();
 
+		float[,,] noiseMapGravel = Noise.GenerateNoiseMap3D(chunkSize, chunkSizeP1, chunkSize, seed + 1, worldGenerator.noiseSettings_Gravel, offset);
+		float[,,] noiseMapCoal = Noise.GenerateNoiseMap3D(chunkSize, chunkSizeP1, chunkSize, seed + 2, worldGenerator.noiseSettings_Coal, offset);
+		float[,,] noiseMapIron = Noise.GenerateNoiseMap3D(chunkSize, chunkSizeP1, chunkSize, seed + 3, worldGenerator.noiseSettings_Iron, offset);
+		
+		swOres.Stop();
+
+		
+
+		Stopwatch swBlockChange = new Stopwatch();
+		swBlockChange.Start();
+
+		float[,,] noiseMapElevationSlice = new float[chunkSize, chunkSizeP1, chunkSize];
+		
 		// Generate NoiseMapElevationSlice
 		for (int x = 0; x < chunkSize; x++) {
 			for (int z = 0; z < chunkSize; z++) {
-				for (int y = 0; y < chunkSize + 1; y++) {
+				for (int y = 0; y < chunkSizeP1; y++) {
 					if (chunkPosition.y < worldGenerator.elevationBottom) {
-						noiseMapElevationSlice[x, y, z] = 1.25f;
+						noiseMapElevationSlice[x, y, z] = 1.5f;
 					} else if (chunkPosition.y > worldGenerator.elevationBottom + worldGenerator.elevationHeight) {
-						noiseMapElevationSlice[x, y, z] = -1.25f;
+						noiseMapElevationSlice[x, y, z] = -0.8f;
 					} else {
 						noiseMapElevationSlice[x, y, z] = noiseMapElevation[x, (int)(chunkPosition.y - worldGenerator.elevationBottom + y), z];
 					}
@@ -78,19 +107,20 @@ public class Chunk : MonoBehaviour {
 
 		// Combine NoiseMaps
 		float[,,] noiseMapFinal = Noise.CombineNoiseMaps(noiseMapMountains, noiseMapElevationSlice);
+		//float[,,] noiseMapFinal = noiseMapElevationSlice;
 
 		// Generate Blocks
 		for (int x = 0; x < chunkSize; x++) {
 			for (int z = 0; z < chunkSize; z++) {
-				for (int y = 0; y < chunkSize + 1; y++) {
+				for (int y = 0; y < chunkSizeP1; y++) {
 					if (y == chunkSize) {
-						if (noiseMapFinal[x, y, z] >= 0f) {
+						if (noiseMapFinal[x, y, z] >= 0) {
 							blocksAbove[x, z] = 1;
 						} else {
 							blocksAbove[x, z] = 0;
 						}
 					} else {
-						if (noiseMapFinal[x, y, z] >= 0f) {
+						if (noiseMapFinal[x, y, z] >= 0) {
 							blocks[x, y, z] = 1;
 						} else {
 							blocks[x, y, z] = 0;
@@ -101,34 +131,38 @@ public class Chunk : MonoBehaviour {
 		}
 
 		// Generate Grass / Dirt
-		for (int x = 0; x < chunkSize; x++) {
-			for (int z = 0; z < chunkSize; z++) {
-				for (int y = 0; y < chunkSize; y++) {
-					if (blocks[x, y, z] == 1 && ((y < chunkSize - 1 && blocks[x, y + 1, z] == 0) || (y == chunkSize - 1 && blocksAbove[x, z] == 0))) {
-						blocks[x, y, z] = 3;        // Set Grass
-						if (y > 0 && blocks[x, y - 1, z] == 1) {
-							blocks[x, y - 1, z] = 2;    // Set Dirt
-							if (y > 2 && blocks[x, y - 2, z] == 1) {
-								blocks[x, y - 2, z] = 2;    // Set Dirt
+		for (int y = 0; y < chunkSize; y++) {
+			int verticalPos = (int)chunkPosition.y + y;
+			
+			for (int x = 0; x < chunkSize; x++) {
+				for (int z = 0; z < chunkSize; z++) {
+					if (verticalPos >= worldGenerator.elevationBottom && (verticalPos < worldGenerator.elevationBottom + worldGenerator.elevationHeight - 1) && noiseMapElevationSlice[x, y + 1, z] < 1f) {
+					if (blocks[x, y, z] == 1 && ((y < chunkSizeM1 && blocks[x, y + 1, z] == 0) || (y == chunkSizeM1 && blocksAbove[x, z] == 0))) {
+							blocks[x, y, z] = 3;        // Set Grass
+							if (y > 0 && blocks[x, y - 1, z] == 1) {
+								blocks[x, y - 1, z] = 2;    // Set Dirt
+								if (y > 2 && blocks[x, y - 2, z] == 1) {
+									blocks[x, y - 2, z] = 2;    // Set Dirt
+								}
 							}
-						}
 
+						}
 					}
 				}
 			}
 		}
 
-
+		
 		// Generate Ores
 		for (int x = 0; x < chunkSize; x++) {
 			for (int z = 0; z < chunkSize; z++) {
 				for (int y = 0; y < chunkSize; y++) {
 					if (blocks[x, y, z] == 1) {
-						if (noiseMapGravel[x, y, z] > 0.5f) {               // Gravel
+						if (noiseMapGravel[x, y, z] > 0.75f) {               // Gravel
 							blocks[x, y, z] = 4;
-						} else if (noiseMapCoal[x, y, z] > 1.5f) {          // Coal
+						} else if (noiseMapCoal[x, y, z] > 2.0f) {          // Coal
 							blocks[x, y, z] = 5;
-						} else if (noiseMapIron[x, y, z] > 1.5f) {          // Iron
+						} else if (noiseMapIron[x, y, z] > 2.5f) {          // Iron
 							blocks[x, y, z] = 6;
 						}
 					}
@@ -136,7 +170,41 @@ public class Chunk : MonoBehaviour {
 			}
 		}
 
+		swBlockChange.Stop();
+
+		Stopwatch swMesh = new Stopwatch();
+		swMesh.Start();
+
 		GenerateMesh();
+
+		swMesh.Stop();
+
+		swTotal.Stop();
+
+		// Add up averages
+		worldGenerator.averageTimeTotal *= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeTotal += swTotal.ElapsedMilliseconds;
+		worldGenerator.averageTimeTerrainA *= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeTerrainA += swTerrainA.ElapsedMilliseconds;
+		worldGenerator.averageTimeTerrainB *= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeTerrainB += swTerrainB.ElapsedMilliseconds;
+		worldGenerator.averageTimeOres *= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeOres += swOres.ElapsedMilliseconds;
+		worldGenerator.averageTimeBlockChange *= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeBlockChange += swBlockChange.ElapsedMilliseconds;
+		worldGenerator.averageTimeMesh *= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeMesh += swMesh.ElapsedMilliseconds;
+
+		worldGenerator.averageTimeCount++;
+
+		worldGenerator.averageTimeTotal /= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeTerrainA /= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeTerrainB /= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeOres /= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeBlockChange /= worldGenerator.averageTimeCount;
+		worldGenerator.averageTimeMesh /= worldGenerator.averageTimeCount;
+		
+		//UnityEngine.Debug.Log("(Load Time: " + swTotal.ElapsedMilliseconds + ") (Average Total: " + worldGenerator.averageTimeTotal + ")" + ") (TerrainA: " + worldGenerator.averageTimeTerrainA + ")" + ") (TerrainB: " + worldGenerator.averageTimeTerrainB + ")" + ") (Ores: " + worldGenerator.averageTimeOres + ")" + ") (Block Change: " + worldGenerator.averageTimeBlockChange + ")" + ") (Mesh: " + worldGenerator.averageTimeMesh + ")");
 	}
 	
 	public void UnloadChunk () {
@@ -204,7 +272,7 @@ public class Chunk : MonoBehaviour {
 						}
 
 						// Bottom Face
-						if (y > 0 && blocks[x, y - 1, z] == 0 || (y == 0 && chunkBottom != null && chunkBottom.blocks[x, 15, z] == 0)) {
+						if (y > 0 && blocks[x, y - 1, z] == 0 || (y == 0 && chunkBottom != null && chunkBottom.blocks[x, chunkSizeM1, z] == 0)) {
 							vertices.Add(new Vector3(x - 0.5f, y - 0.5f, z - 0.5f));
 							vertices.Add(new Vector3(x + 0.5f, y - 0.5f, z - 0.5f));
 							vertices.Add(new Vector3(x + 0.5f, y - 0.5f, z + 0.5f));
@@ -227,7 +295,7 @@ public class Chunk : MonoBehaviour {
 						}
 
 						// Left Face
-						if (x > 0 && blocks[x - 1, y, z] == 0 || (x == 0 && chunkLeft != null && chunkLeft.blocks[15, y, z] == 0)) {
+						if (x > 0 && blocks[x - 1, y, z] == 0 || (x == 0 && chunkLeft != null && chunkLeft.blocks[chunkSizeM1, y, z] == 0)) {
 							vertices.Add(new Vector3(x - 0.5f, y + 0.5f, z + 0.5f));
 							vertices.Add(new Vector3(x - 0.5f, y + 0.5f, z - 0.5f));
 							vertices.Add(new Vector3(x - 0.5f, y - 0.5f, z - 0.5f));
@@ -273,7 +341,7 @@ public class Chunk : MonoBehaviour {
 						}
 
 						// Front Face
-						if (z > 0 && blocks[x, y, z - 1] == 0 || (z == 0 && chunkBack != null && chunkBack.blocks[x, y, 15] == 0)) {
+						if (z > 0 && blocks[x, y, z - 1] == 0 || (z == 0 && chunkBack != null && chunkBack.blocks[x, y, chunkSizeM1] == 0)) {
 							vertices.Add(new Vector3(x - 0.5f, y + 0.5f, z - 0.5f));
 							vertices.Add(new Vector3(x + 0.5f, y + 0.5f, z - 0.5f));
 							vertices.Add(new Vector3(x + 0.5f, y - 0.5f, z - 0.5f));
@@ -345,7 +413,7 @@ public class Chunk : MonoBehaviour {
 	public void BreakBlock (Vector3 hitPoint, Vector3 hitNormal, Vector3 hitDirection) {
 		Vector3 blockPosition = (hitPoint + hitNormal * -0.05f);
 		blockPosition = new Vector3(Mathf.Round(blockPosition.x), Mathf.Round(blockPosition.y), Mathf.Round(blockPosition.z));
-		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * 16;
+		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * chunkSize;
 
 		Coordinates blockCoords = new Coordinates(blockPosition.x - chunkPosition.x, blockPosition.y - chunkPosition.y, blockPosition.z - chunkPosition.z);
 		BreakBlock(blockCoords, hitDirection, true);
@@ -353,7 +421,7 @@ public class Chunk : MonoBehaviour {
 
 	public void BreakBlock(Coordinates blockCoords, Vector3 hitDirection, bool spawnDebris) {
 
-		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * 16;
+		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * chunkSize;
 		Vector3 blockPositionWorld = new Vector3(blockCoords.x, blockCoords.y, blockCoords.z) + chunkPosition;
 
 		int blockType = blocks[blockCoords.x, blockCoords.y, blockCoords.z];
@@ -366,7 +434,7 @@ public class Chunk : MonoBehaviour {
 		if (blockCoords.x == 0 && chunkLeft) {
 			chunkLeft.meshUpdatePending = true;
 			blocksUpdating.Add(new Coordinates(blockCoords.x + 1, blockCoords.y, blockCoords.z));
-		} else if (blockCoords.x == 15 && chunkRight) {
+		} else if (blockCoords.x == chunkSizeM1 && chunkRight) {
 			chunkRight.meshUpdatePending = true;
 			blocksUpdating.Add(new Coordinates(blockCoords.x - 1, blockCoords.y, blockCoords.z));
 		} else {
@@ -377,7 +445,7 @@ public class Chunk : MonoBehaviour {
 		if (blockCoords.y == 0 && chunkBottom) {
 			chunkBottom.meshUpdatePending = true;
 			blocksUpdating.Add(new Coordinates(blockCoords.x, blockCoords.y + 1, blockCoords.z));
-		} else if (blockCoords.y == 15 && chunkTop) {
+		} else if (blockCoords.y == chunkSizeM1 && chunkTop) {
 			chunkTop.meshUpdatePending = true;
 			blocksUpdating.Add(new Coordinates(blockCoords.x, blockCoords.y - 1, blockCoords.z));
 		} else {
@@ -388,7 +456,7 @@ public class Chunk : MonoBehaviour {
 		if (blockCoords.z == 0 && chunkBack) {
 			chunkBack.meshUpdatePending = true;
 			blocksUpdating.Add(new Coordinates(blockCoords.x, blockCoords.y, blockCoords.z + 1));
-		} else if (blockCoords.z == 15 && chunkFront) {
+		} else if (blockCoords.z == chunkSizeM1 && chunkFront) {
 			chunkFront.meshUpdatePending = true;
 			blocksUpdating.Add(new Coordinates(blockCoords.x, blockCoords.y, blockCoords.z - 1));
 		} else {
@@ -399,20 +467,20 @@ public class Chunk : MonoBehaviour {
 		UpdateBlocks(blocksUpdating);
 
 		if (blockCoords.x == 0) {
-			chunkLeft.UpdateBlock(15, blockCoords.y, blockCoords.z);
-		} else if (blockCoords.x == 15) {
+			chunkLeft.UpdateBlock(chunkSizeM1, blockCoords.y, blockCoords.z);
+		} else if (blockCoords.x == chunkSizeM1) {
 			chunkRight.UpdateBlock(0, blockCoords.y, blockCoords.z);
 		}
 
 		if (blockCoords.y == 0) {
-			chunkBottom.UpdateBlock(blockCoords.x, 15, blockCoords.z);
-		} else if (blockCoords.y == 15) {
+			chunkBottom.UpdateBlock(blockCoords.x, chunkSizeM1, blockCoords.z);
+		} else if (blockCoords.y == chunkSizeM1) {
 			chunkTop.UpdateBlock(blockCoords.x, 0, blockCoords.z);
 		}
 
 		if (blockCoords.z == 0) {
-			chunkBack.UpdateBlock(blockCoords.x, blockCoords.y, 15);
-		} else if (blockCoords.z == 15) {
+			chunkBack.UpdateBlock(blockCoords.x, blockCoords.y, chunkSizeM1);
+		} else if (blockCoords.z == chunkSizeM1) {
 			chunkFront.UpdateBlock(blockCoords.x, blockCoords.y, 0);
 		}
 
@@ -423,7 +491,7 @@ public class Chunk : MonoBehaviour {
 	}
 
 	public void AttemptPlaceBlock (Vector3 hitPoint, Vector3 hitNormal) {
-		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * 16;
+		Vector3 chunkPosition = new Vector3(coordinates.x, coordinates.y, coordinates.z) * chunkSize;
 		Vector3 blockPosition = (hitPoint + hitNormal * -0.05f);
 
 		blockPosition = new Vector3(Mathf.Round(blockPosition.x), Mathf.Round(blockPosition.y), Mathf.Round(blockPosition.z));
@@ -434,25 +502,24 @@ public class Chunk : MonoBehaviour {
 
 		if (blockPosition.x < 0 && chunkLeft) {
 			chunkParent = chunkLeft;
-			blockPosition.x += 16;
-		} else if (blockPosition.x > 15 && chunkRight) {
+			blockPosition.x += chunkSize;
+		} else if (blockPosition.x > chunkSizeM1 && chunkRight) {
 			chunkParent = chunkRight;
-			blockPosition.x -= 16;
+			blockPosition.x -= chunkSize;
 		} else if (blockPosition.y < 0 && chunkBottom) {
 			chunkParent = chunkBottom;
-			blockPosition.y += 16;
-		} else if (blockPosition.y > 15 && chunkTop) {
+			blockPosition.y += chunkSize;
+		} else if (blockPosition.y > chunkSizeM1 && chunkTop) {
 			chunkParent = chunkTop;
-			blockPosition.y -= 16;
+			blockPosition.y -= chunkSize;
 		} else if (blockPosition.z < 0 && chunkBack) {
 			chunkParent = chunkBack;
-			blockPosition.z += 16;
-		} else if (blockPosition.z > 15 && chunkFront) {
+			blockPosition.z += chunkSize;
+		} else if (blockPosition.z > chunkSizeM1 && chunkFront) {
 			chunkParent = chunkFront;
-			blockPosition.z -= 16;
+			blockPosition.z -= chunkSize;
 		}
-
-		UnityEngine.Debug.Log(blockPosition);
+		
 		chunkParent.PlaceBlock(blockPosition);
 	}
 
@@ -466,7 +533,7 @@ public class Chunk : MonoBehaviour {
 			chunkLeft.meshUpdatePending = true;
 		}
 
-		if (blockPos.x == 15 && chunkRight) {
+		if (blockPos.x == chunkSizeM1 && chunkRight) {
 			chunkRight.meshUpdatePending = true;
 		}
 
@@ -474,7 +541,7 @@ public class Chunk : MonoBehaviour {
 			chunkBottom.meshUpdatePending = true;
 		}
 
-		if (blockPos.y == 15 && chunkTop) {
+		if (blockPos.y == chunkSizeM1 && chunkTop) {
 			chunkTop.meshUpdatePending = true;
 		}
 
@@ -482,7 +549,7 @@ public class Chunk : MonoBehaviour {
 			chunkBack.meshUpdatePending = true;
 		}
 
-		if (blockPos.z == 15 && chunkFront) {
+		if (blockPos.z == chunkSizeM1 && chunkFront) {
 			chunkFront.meshUpdatePending = true;
 		}
 	}
@@ -514,7 +581,7 @@ public class Chunk : MonoBehaviour {
 			if (blocks[x, y - 1, z] == 0) {
 				BreakBlock(new Coordinates(x, y, z), Vector3.zero, false);
 			}
-		} else if (chunkBottom != null && chunkBottom.blocks[x, 15, z] == 0) {
+		} else if (chunkBottom != null && chunkBottom.blocks[x, chunkSizeM1, z] == 0) {
 			BreakBlock(new Coordinates(x, y, z), Vector3.zero, false);
 		}
 	}

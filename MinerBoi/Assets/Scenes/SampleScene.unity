@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 170076734}
-  m_IndirectSpecularColor: {r: 0.45112246, g: 0.50091475, b: 0.5739847, a: 1}
+  m_IndirectSpecularColor: {r: 0.45054066, g: 0.50052965, b: 0.575093, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -174,13 +174,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 170076733}
-  m_LocalRotation: {x: 0.25484487, y: -0.25086653, z: 0.1516115, w: 0.9214847}
+  m_LocalRotation: {x: 0.3004824, y: -0.33268562, z: 0.089798994, w: 0.88936317}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 33.075, y: -27.357, z: 10.42}
+  m_LocalEulerAnglesHint: {x: 36.457, y: -41.963, z: -2.8650002}
 --- !u!1 &396524272
 GameObject:
   m_ObjectHideFlags: 0
@@ -500,13 +500,16 @@ MonoBehaviour:
     uvPosTop: {x: 3, y: 1}
     uvPosBottom: {x: 3, y: 1}
     uvPosSide: {x: 3, y: 1}
-  seed: 8
+  environmentMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  seed: 25
   curve_Elevation:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
-      time: -0.101043805
-      value: 0.22973818
+      time: 0
+      value: 0
       inSlope: -0.005259022
       outSlope: -0.005259022
       tangentMode: 0
@@ -514,17 +517,17 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 1
     - serializedVersion: 3
-      time: 0.1420156
-      value: 0.2672106
-      inSlope: 0.0130761145
-      outSlope: 0.0130761145
+      time: 0.25460947
+      value: 0.062681936
+      inSlope: 0.27480304
+      outSlope: 0.27480304
       tangentMode: 0
       weightedMode: 0
       inWeight: 0.33333334
-      outWeight: 0.17356713
+      outWeight: 1
     - serializedVersion: 3
-      time: 0.33831668
-      value: 0.39996704
+      time: 0.35050243
+      value: 0.288732
       inSlope: 0.628878
       outSlope: 0.628878
       tangentMode: 0
@@ -532,8 +535,8 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 0.21755195
     - serializedVersion: 3
-      time: 0.640221
-      value: 0.49897113
+      time: 0.67644995
+      value: 0.4281856
       inSlope: 0.91051203
       outSlope: 0.91051203
       tangentMode: 0
@@ -541,8 +544,8 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
-      time: 0.79836875
-      value: 0.8103063
+      time: 0.805352
+      value: 0.76030326
       inSlope: 0.0019902282
       outSlope: 0.0019902282
       tangentMode: 0
@@ -550,8 +553,8 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 1
     - serializedVersion: 3
-      time: 0.92146146
-      value: 0.8412325
+      time: 0.95283353
+      value: 0.866234
       inSlope: 1.1106488
       outSlope: 1.1106488
       tangentMode: 0
@@ -571,43 +574,82 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   elevationBottom: -64
-  elevationHeight: 192
+  elevationHeight: 256
   noiseSettings_Mountains:
-    scale: 125
+    scale: 225
     octaves: 4
-    persistance: 0.5
-    lacunarity: 2
+    amplitudeTable:
+    - 1
+    - 0.5
+    - 0.25
+    - 0.125
+    frequencyTable:
+    - 1
+    - 2
+    - 4
+    - 8
   noiseSettings_Elevation:
-    scale: 175
+    scale: 450
     octaves: 5
-    persistance: 0.5
-    lacunarity: 2
+    amplitudeTable:
+    - 1
+    - 0.5
+    - 0.25
+    - 0.125
+    - 0.0625
+    frequencyTable:
+    - 1
+    - 2
+    - 4
+    - 8
+    - 16
   noiseSettings_Gravel:
-    scale: 12.5
-    octaves: 2
-    persistance: 0.5
-    lacunarity: 2.5
+    scale: 25
+    octaves: 1
+    amplitudeTable:
+    - 1
+    frequencyTable:
+    - 1
   noiseSettings_Caves:
     scale: 0
     octaves: 0
-    persistance: 0
-    lacunarity: 0
+    amplitudeTable: []
+    frequencyTable: []
   noiseSettings_Coal:
-    scale: 15
-    octaves: 2
-    persistance: 0.5
-    lacunarity: 2
+    scale: 7.5
+    octaves: 1
+    amplitudeTable:
+    - 1
+    frequencyTable:
+    - 1
   noiseSettings_Iron:
-    scale: 10
-    octaves: 2
-    persistance: 0.5
-    lacunarity: 3
+    scale: 5
+    octaves: 1
+    amplitudeTable:
+    - 1
+    frequencyTable:
+    - 1
   playerCoordinates:
     x: 0
     y: 0
     z: 0
   prefab_Chunk: {fileID: 6354792037665389062, guid: f61c82358e89132469e77be67d3e6436,
     type: 3}
+  averageTimeTotal: 0
+  averageTimeTerrainA: 0
+  averageTimeTerrainB: 0
+  averageTimeOres: 0
+  averageTimeBlockChange: 0
+  averageTimeMesh: 0
+  averageTimeCount: 0
+  chunkTimeTotal: 0
+  chunkTimeCount: 0
+  chunksSkipped: 0
+  findChunkTimeTotal: 0
+  findChunkPreUnload: 0
+  findChunkTimeQueueLoadUnload: 0
+  findChunkUnload: 0
+  findChunkTimeCount: 0
 --- !u!4 &1569413933
 Transform:
   m_ObjectHideFlags: 0
